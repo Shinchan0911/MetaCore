@@ -740,6 +740,10 @@ function formatHistoryMessage(m) {
 // Get a more readable message type for AdminTextMessages
 function getAdminTextMessageType(m) {
     switch (m.type) {
+        case "joinable_group_link_mode_change":
+            return "log:link-status";
+        case "magic_words":
+            return "log:magic-words";
         case "change_thread_theme":
             return "log:thread-color";
         case "change_thread_icon":
@@ -755,6 +759,8 @@ function getAdminTextMessageType(m) {
         case "messenger_call_log":
         case "participant_joined_group_call":
             return "log:thread-call";
+        case "pin_messages_v2":
+            return "log:thread-pinned";
     }
 }
 

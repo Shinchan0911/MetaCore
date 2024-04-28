@@ -2,6 +2,44 @@ const utils = require("../utils");
 const log = require("npmlog");
 
 module.exports = function (defaultFuncs, api, ctx) {
+	return function uploadAttachment(attachments, callback) {
+		if (
+			!attachments &&
+			!utils.isReadableStream(attachments) &&
+			!utils.getType(attachments) === "Array" &&
+			(utils.getType(attachments) === "Array" && !attachments.length)
+		)
+			throw { error: "Please pass an attachment or an array of attachments." };
+
+		let resolveFunc = function () { };
+		let rejectFunc = function () { };
+		const returnPromise = new Promise(function (resolve, reject) {
+			resolveFunc = resolve;
+			rejectFunc = reject;
+		});
+
+		if (!callback) {
+			callback = function (err, info) {
+				if (err) {
+					return rejectFunc(err);
+				}
+				resolveFunc(info);
+			};
+		}
+
+		if (utils.getType(attachments) !== "Array")
+			attachments = [attachments];
+
+		upload(attachments, (err, info) => {
+			if (err) {
+				return callback(err);
+			}
+			callback(null, info);
+		});
+
+		return returnPromise;
+	};
+
 	function upload(attachments, callback) {
 		callback = callback || function () { };
 		const uploads = [];
@@ -54,42 +92,4 @@ module.exports = function (defaultFuncs, api, ctx) {
 				return callback(err);
 			});
 	}
-
-	return function uploadAttachment(attachments, callback) {
-		if (
-			!attachments &&
-			!utils.isReadableStream(attachments) &&
-			!utils.getType(attachments) === "Array" &&
-			(utils.getType(attachments) === "Array" && !attachments.length)
-		)
-			throw { error: "Please pass an attachment or an array of attachments." };
-
-		let resolveFunc = function () { };
-		let rejectFunc = function () { };
-		const returnPromise = new Promise(function (resolve, reject) {
-			resolveFunc = resolve;
-			rejectFunc = reject;
-		});
-
-		if (!callback) {
-			callback = function (err, info) {
-				if (err) {
-					return rejectFunc(err);
-				}
-				resolveFunc(info);
-			};
-		}
-
-		if (utils.getType(attachments) !== "Array")
-			attachments = [attachments];
-
-		upload(attachments, (err, info) => {
-			if (err) {
-				return callback(err);
-			}
-			callback(null, info);
-		});
-
-		return returnPromise;
-	};
 };
