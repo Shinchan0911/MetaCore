@@ -8,6 +8,7 @@ var HttpsProxyAgent = require('https-proxy-agent');
 const EventEmitter = require('events');
 const logger = require('../logger');
 const extension = require('../utils/Extension');
+var { getKeyValue } = require('../utils/Database');
 
 var identity = function() { };
 var form = {};
@@ -109,27 +110,29 @@ function listenMqtt(defaultFuncs, api, ctx, globalCallback) {
 
   mqttClient.on('connect', async function() {
     if (process.env.OnStatus == undefined) {
-      if (require(process.cwd() + "/MetaCord_Config.json").Count_Online_Time.Enable) {
+      if (require(process.cwd() + "/MetaCore_Config.json").Count_Online_Time.Enable) {
         extension.StartCountOnlineTime();
         const { day, hour, minute } = extension.GetCountOnlineTime();
         logger(`Your Bot is now running: ${day} day | ${hour} hour | ${minute} minute`);
       }
-      if (require(process.cwd() + "/MetaCord_Config.json").Restart_MQTT.Enable || require(process.cwd() + "/MetaCord_Config.json").Restart_MQTT.Minutes > 0) {
+      if (require(process.cwd() + "/MetaCore_Config.json").Restart_MQTT.Enable || require(process.cwd() + "/MetaCore_Config.json").Restart_MQTT.Minutes > 0) {
         setTimeout(() => {
           logger("Closing MQTT Client...");
           ctx.mqttClient.end();
           logger("Reconnecting MQTT Client...");
           getSeqID();
-        }, Number(require(process.cwd() + "/MetaCord_Config.json").Restart_MQTT.Minutes) * 60 * 1000);
+        }, Number(require(process.cwd() + "/MetaCore_Config.json").Restart_MQTT.Minutes) * 60 * 1000);
       }
-      if (require(process.cwd() + "/MetaCord_Config.json").Auto_Restart.Enable || require(process.cwd() + "/MetaCord_Config.json").Auto_Restart.Minutes > 0) {
+      if (require(process.cwd() + "/MetaCore_Config.json").Auto_Restart.Enable || require(process.cwd() + "/MetaCore_Config.json").Auto_Restart.Minutes > 0) {
         setTimeout(() => {
           logger("Auto Restart Your Bot !");
           process.exit(1);
-        }, Number(require(process.cwd() + "/MetaCord_Config.json").Auto_Restart.Minutes) * 60 * 1000);
+        }, Number(require(process.cwd() + "/MetaCore_Config.json").Auto_Restart.Minutes) * 60 * 1000);
       }
+      logger("Thank For Using")
       process.env.OnStatus = true;
     }
+
 
 
     topics.forEach(topicsub => mqttClient.subscribe(topicsub));
@@ -657,7 +660,22 @@ module.exports = function(defaultFuncs, api, ctx) {
       .post("https://www.facebook.com/api/graphqlbatch/", ctx.jar, form)
       .then(utils.parseAndCheckLogin(ctx, defaultFuncs))
       .then((resData) => {
-        if (utils.getType(resData) != "Array") throw { error: "Not logged in", res: resData };
+        if (utils.getType(resData) != "Array") {
+          if (require(process.cwd() + "/MetaCore_Config.json").AutoLogin) {
+            logger("The account has been logged out, proceed to automatically log back");
+            if (getKeyValue('Email') || getKeyValue('Password')) {
+                const email = getKeyValue('Email');
+                const password = getKeyValue('Password');
+
+                return extension.Auto_Login(email, password);
+            } else {
+                logger("Please enter the email and password");
+                return process.exit(1);
+            }
+          } else  {
+            throw { error: "Not logged in", res: resData };
+          }
+        } else {
         if (resData && resData[resData.length - 1].error_results > 0) throw resData[0].o0.errors;
         if (resData[resData.length - 1].successful_results === 0) throw { error: "getSeqId: there was no successful_results", res: resData };
         if (resData[0].o0.data.viewer.message_threads.sync_sequence_id) {
@@ -665,6 +683,7 @@ module.exports = function(defaultFuncs, api, ctx) {
           listenMqtt(defaultFuncs, api, ctx, globalCallback);
         }
         else throw { error: "getSeqId: no sync_sequence_id found.", res: resData };
+      }
       })
       .catch((err) => {
         log.error("getSeqId", err);

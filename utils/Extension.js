@@ -1,55 +1,7 @@
-const express = require('express');
-const app = express();
 const logger = require('../logger');
-const path = require('path');
 const axios = require('axios');
-const chalk = require('chalk');
 const fs = require('fs');
-var { readFileSync } = require('fs-extra');
-const { execSync } = require('child_process');
 const { setKeyValue } = require('./Database');
-
-function Auto_Uptime() {
-    switch (process.platform) {
-        case 'win32':
-        case 'darwin':
-            logger("Your Operating System does not currently support Auto Uptime !");
-            break;
-        case 'linux':
-            if (process.env.REPL_SLUG) {
-                const url = `https://${process.env.REPL_SLUG}.${process.env.REPL_OWNER}.repl.co`.toLowerCase();
-                logger(`Activating uptime for ${chalk.underline(`'${url}'`)}`);
-                return setInterval(function () {
-                    axios.get(url).then(() => { }).catch(() => { });
-                }, 10 * 1000);
-            } else {
-                logger("Your Operating System does not currently support Auto Uptime !");
-            }
-            break;
-        default:
-            logger("Your Operating System does not currently support Auto Uptime !");
-    }
-}
-
-function CreateSiteHtml(port) {
-    app.use(express.static(path.join(__dirname, "/Html")));
-
-    app.get('/', function (req, res) {
-        res.sendFile(path.join(__dirname, '/Html/index.html'));
-    });
-
-    app.get('/', (req, res) => res.sendStatus(200));
-
-    const listen_port = port || 3000;
-
-    app.listen(listen_port, () => {
-        logger(`Bot is running on port: ${listen_port}`);
-    });
-
-    app.on('error', (error) => {
-        logger(`An error occurred while starting the server: ${error}`);
-    });
-}
 
 async function getUIDSlow(url) {
     var FormData = require("form-data");
@@ -133,75 +85,22 @@ function GetCountOnlineTime() {
     return { day, hour, minute };
 }
 
-async function Change_Environment() {
-    const main = fs.readFileSync(process.cwd() + "/replit.nix", { encoding: 'utf8' });
-    const newnix = fs.readFileSync(__dirname, + "/replit.nix", { encoding: 'utf8' });
-    if (main != newnix) {
-        logger("Changing replit.nix to support node v14!")
-        fs.writeFileSync(process.cwd() + "/replit.nix", newnix, { encoding: 'utf8' });
-        logger("Successfully changed replit.nix, go ahead and restart!");
-        return console.clear(), process.exit(1);
-    }
-}
-
-async function Auto_Update(config, configPath) {
-    logger('Auto Check Update ...', "[ MetaCord ]");
-    axios.get('https://raw.githubusercontent.com/Shinchan0911/MetaCord/main/MetaCord_Config.json').then(async (res) => {
-        if (res.data.Config_Version != config.Config_Version) {
-            logger(`New Config Version Published: ${config.Config_Version} => ${res.data.Config_Version}`, "[ MetaCord ]");
-            logger(`Perform Automatic Update Config to the Latest Version !`, "[ MetaCord ]");
-            await fs.writeFileSync(configPath, JSON.stringify(res.data, null, 2));
-            logger("Config Version Upgrade Successful!", "[ MetaCord ]");
-            logger('Restarting...', '[ MetaCord ]');
-            await new Promise(resolve => setTimeout(resolve, 5 * 1000));
-            console.clear(), process.exit(1);
-        }
-    });
-    axios.get('https://raw.githubusercontent.com/Shinchan0911/MetaCord/main/package.json').then(async (res) => {
-        const localbrand = JSON.parse(readFileSync('./node_modules/metacord/package.json')).version;
-        if (localbrand != res.data.version) {
-            logger(`New Version Published: ${JSON.parse(readFileSync('./node_modules/metacord/package.json')).version} => ${res.data.version}`, "[ MetaCord ]");
-            logger(`Perform Automatic Update to the Latest Version !`, "[ MetaCord ]");
-            try {
-                fs.rmdirSync((process.cwd() + "/node_modules/metacord" || __dirname + '../../../metacord'), { recursive: true });
-                execSync('npm install metacord@latest', { stdio: 'inherit' });
-                logger("Version Upgrade Successful!", "[ MetaCord ]");
-                logger('Restarting...', '[ MetaCord ]');
-                await new Promise(resolve => setTimeout(resolve, 5 * 1000));
-                console.clear(), process.exit(1);
-            }
-            catch (err) {
-                logger('Auto Update error ! ' + err, "[ MetaCord ]");
-            }
-        }
-        else {
-            logger(`You Are Currently Using Version: ` + localbrand + ' !', "[ MetaCord ]");
-            logger(`And Config Version: ` + config.Config_Version + ' !', "[ MetaCord ]");
-            logger(`Have a good day !`);
-        }
-    });
-}
-
 async function Auto_Login(Email, PassWord) {
     require('../index')({ email: Email, password: PassWord},async (error, api) => {
         if (error) {
             setKeyValue("Email", null);
             setKeyValue("Password", null);
             
-            return logger("Auto Login Failed!"), process.exit(1);
+            return logger("Auto Login Failed!", "[ MetaCore ]"), process.exit(1);
         } else {
-            return console.log("Auto Login Successful!") ,process.exit(1);
+            return console.log("Auto Login Successful!", "[ MetaCore ]") ,process.exit(1);
         }
     });
 }
 
 module.exports = {
-    CreateSiteHtml,
-    Auto_Uptime,
     getUID,
     StartCountOnlineTime,
     GetCountOnlineTime,
-    Change_Environment,
-    Auto_Update,
     Auto_Login
 };

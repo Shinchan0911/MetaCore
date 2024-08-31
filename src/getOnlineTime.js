@@ -18,10 +18,10 @@ module.exports = function (_defaultFuncs, _ctx) {
         }
 
         try {
-            if (!require(process.cwd() + "/MetaCord_Config.json").Count_Online_Time.Enable) return callback(null, "Not Enable Count Online Time");
+            if (!require(process.cwd() + "/MetaCore_Config.json").Count_Online_Time.Enable) return callback(null, "Not Enable Count Online Time");
             const extension = require('../utils/Extension');
             const { day, hour, minute } = extension.GetCountOnlineTime();
-            callback((require(process.cwd() + "/MetaCord_Config.json").Count_Online_Time.Format).replace("{day}", day).replace("{hour}", hour).replace("{minute}", minute), null);
+            callback((require(process.cwd() + "/MetaCore_Config.json").Count_Online_Time.Format).replace("{day}", day).replace("{hour}", hour).replace("{minute}", minute), null);
         }
         catch (e) {
             return callback(null, e);

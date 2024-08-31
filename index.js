@@ -20,9 +20,9 @@ var checkVerified = null;
 var defaultLogRecordSize = 100;
 log.maxRecordSize = defaultLogRecordSize;
 
-var configPath = process.cwd() + '/MetaCord_Config.json';
+var configPath = process.cwd() + '/MetaCore_Config.json';
 
-const defaultConfig = require("./MetaCord_Config.json");
+const defaultConfig = require("./MetaCore_Config.json");
 
 if (!fs.existsSync(configPath)) {
     fs.writeFileSync(configPath, JSON.stringify(defaultConfig, null, 2));
@@ -98,13 +98,15 @@ function setOptions(globalOptions, options) {
 }
 
 function buildAPI(globalOptions, html, jar) {
-    var maybeCookie = jar.getCookies("https://www.facebook.com").filter(function (val) {
-        return val.cookieString().split("=")[0] === "c_user";
-    });
+     //check tiktik
+    var userID;
+    var cookie = jar.getCookies("https://www.facebook.com");
+    var maybeUser = cookie.filter(function(val) { return val.cookieString().split("=")[0] === "c_user"; });
+    var maybeTiktik = cookie.filter(function(val) { return val.cookieString().split("=")[0] === "i_user"; });
 
-    if (maybeCookie.length === 0) {
+    if (maybeUser.length === 0 && maybeTiktik.length === 0) {
         if (config.Auto_Login) {
-            log.warn("login", "The account has been logged out, proceed to automatically log back");
+            logger("The account has been logged out, proceed to automatically log back");
             if (getKeyValue('Email') || getKeyValue('Password')) {
                 const email = getKeyValue('Email');
                 const password = getKeyValue('Password');
@@ -119,11 +121,17 @@ function buildAPI(globalOptions, html, jar) {
         }
     }
 
-    if (html.indexOf("/checkpoint/block/?next") > -1) log.warn("login", "CheckPoint Detected - Can't Login, Try Logout Then Login And Get Appstate - Cookie");
+    if (html.indexOf("/checkpoint/block/?next") > -1) logger("CheckPoint Detected - Can't Login, Try Logout Then Login And Get Appstate - Cookie");
 
-    var userID = maybeCookie[0].cookieString().split("=")[1].toString();
-    logger(`Login At ID: ${userID}`, "[ MetaCord ]");
+    if (maybeTiktik[0] && maybeTiktik[0].cookieString().includes('i_user')) {
+        userID = maybeTiktik[0].cookieString().split("=")[1].toString();
+
+    }
+    else userID = maybeUser[0].cookieString().split("=")[1].toString();    
+
+    logger(`Login At ID: ${userID}`);
     process.env['UID'] = userID;
+
     try {
         clearInterval(checkVerified);
     } catch (e) {
@@ -142,21 +150,21 @@ function buildAPI(globalOptions, html, jar) {
         irisSeqID = oldFBMQTTMatch[1];
         mqttEndpoint = oldFBMQTTMatch[2];
         region = new URL(mqttEndpoint).searchParams.get("region").toUpperCase();
-        logger(`Area Of Account Is: ${region}`, "[ MetaCord ]");
+        logger(`Area Of Account Is: ${region}`);
     } else {
         let newFBMQTTMatch = html.match(/{"app_id":"219994525426954","endpoint":"(.+?)","iris_seq_id":"(.+?)"}/);
         if (newFBMQTTMatch) {
             irisSeqID = newFBMQTTMatch[2];
             mqttEndpoint = newFBMQTTMatch[1].replace(/\\\//g, "/");
             region = new URL(mqttEndpoint).searchParams.get("region").toUpperCase();
-            logger(`Area Of Account Is:  ${region}`, "[ MetaCord ]");
+            logger(`Area Of Account Is:  ${region}`);
         } else {
             let legacyFBMQTTMatch = html.match(/(\["MqttWebConfig",\[\],{fbid:")(.+?)(",appID:219994525426954,endpoint:")(.+?)(",pollingEndpoint:")(.+?)(3790])/);
             if (legacyFBMQTTMatch) {
                 mqttEndpoint = legacyFBMQTTMatch[4];
                 region = new URL(mqttEndpoint).searchParams.get("region").toUpperCase();
                 log.warn("login", `Cannot get sequence ID with new RegExp. Fallback to old RegExp (without seqID)...`);
-                logger(`Area Of Account Is: ${region}`, "[ MetaCord ]");
+                logger(`Area Of Account Is: ${region}`);
                 logger("login", `[Unused] Polling endpoint: ${legacyFBMQTTMatch[6]}`);
             } else {
                 log.warn("login", "Can't Get ID Try Again !");
@@ -243,12 +251,13 @@ function buildAPI(globalOptions, html, jar) {
         'httpPost',
         'httpPostFormData',
 
-        //Modding MetaCord
+        //Modding MetaCore
         'getUID',
         'getOnlineTime',
         'shareContact',
         'uploadAttachment',
-        'editMessage'
+        'editMessage',
+        'shareLink'
     ];
 
     var defaultFuncs = utils.makeDefaults(html, userID, ctx);
@@ -300,7 +309,7 @@ function makeLogin(jar, email, password, loginOptions, callback, prCallback) {
         });
         // ---------- Very Hacky Part Ends -----------------
 
-        logger("Logging...", "[ MetaCord ]");
+        logger("Logging...");
         return utils
             .post("https://www.facebook.com/login/device-based/regular/login/?login_attempt=1&lwv=110", jar, form, loginOptions)
             .then(utils.saveCookies(jar))
@@ -310,7 +319,7 @@ function makeLogin(jar, email, password, loginOptions, callback, prCallback) {
 
                 // This means the account has login approvals turned on.
                 if (headers.location.indexOf('https://www.facebook.com/checkpoint/') > -1) {
-                    logger("You Are On 2 Security !", "[ MetaCord ]");
+                    logger("You Are On 2 Security !");
                     var nextURL = 'https://www.facebook.com/checkpoint/?next=https%3A%2F%2Fwww.facebook.com%2Fhome.php';
 
                     return utils
@@ -402,7 +411,7 @@ function makeLogin(jar, email, password, loginOptions, callback, prCallback) {
                                                         JSON.parse(res.body.replace(/for\s*\(\s*;\s*;\s*\)\s*;\s*/, ""));
                                                     } catch (ex) {
                                                         clearInterval(checkVerified);
-                                                        logger("Confirm From Browser, Logging In...", "[ MetaCord ]");
+                                                        logger("Confirm From Browser, Logging In...");
                                                         if (callback === prCallback) {
                                                             callback = function (err, api) {
                                                                 if (err) return prReject(err);
@@ -469,44 +478,16 @@ function makeid(length) {
 }
 
 // Helps the login
-async function loginHelper(appState, email, password, globalOptions, callback, prCallback) {
+function loginHelper(appState, email, password, globalOptions, callback, prCallback) {
     var mainPromise = null;
     var jar = utils.getJar();
-
-    if (config.Create_Html_Site.Enable) {
-        extension.CreateSiteHtml(config.Create_Html_Site.Port);
-    }
-
-    if (config.Auto_Uptime) {
-        extension.Auto_Uptime();
-    }
-
-    if (config.Change_Environment) {
-        await extension.Change_Environment();
-    }
-
-    if (config.Auto_Update) {
-        await extension.Auto_Update(config, configPath);
-    }
-
-    if (config.Auto_Login) {
-        if (!getKeyValue("Email") || !getKeyValue("Password")) {
-            const email = await prompt('Enter your email: ');
-            const password = await prompt('Enter your password: ');
-
-            setKeyValue('Email', email);
-            setKeyValue('Password', password);
-
-            logger('Email and Password saved successfully!');
-        }
-    }
 
     // If we're given an appState we loop through it and save each cookie
     // back into the jar.    
     try {
         if (appState) {
 
-            if (!getKeyValue("AppstateKey1") || !getKeyValue("AppstateKey2") || !getKeyValue("AppstateKey2")) {
+            if (!getKeyValue("AppstateKey1") || !getKeyValue("AppstateKey2") || !getKeyValue("AppstateKey3")) {
                 try {
                     setKeyValue("AppstateKey1", makeid(50));
                     setKeyValue("AppstateKey2", makeid(50));
@@ -515,24 +496,24 @@ async function loginHelper(appState, email, password, globalOptions, callback, p
                 }
                 catch (e) {
                     console.log(e);
-                    logger("An Error Was Found While Trying to Generate Random Password", "[ MetaCord ]");
+                    logger("An Error Was Found While Trying to Generate Random Password");
                 }
             }
 
 
-            if (getKeyValue("AppstateKey1") || getKeyValue("AppstateKey2") || getKeyValue("AppstateKey2")) {
+            if (getKeyValue("AppstateKey1") || getKeyValue("AppstateKey2") || getKeyValue("AppstateKey3")) {
                 try {
                     appState = JSON.stringify(appState);
                     if (appState.includes('[')) {
-                        logger('Not ready for decryption', '[ MetaCord ]')
+                        logger('Not ready for decryption', '[ MetaCore ]')
                     } else {
                         try {
                             appState = JSON.parse(appState);
                             appState = StateCrypt.decryptState(appState, getKeyValue("AppstateKey1"), getKeyValue("AppstateKey2"), getKeyValue("AppstateKey3"));
-                            logger('Decrypt Appstate Success !', '[ MetaCord ]');
+                            logger('Decrypt Appstate Success !', '[ MetaCore ]');
                         }
                         catch (e) {
-                            logger('Replace AppState !', '[ MetaCord ]');
+                            logger('Replace AppState !', '[ MetaCore ]');
                             console.log(e);
                         }
                     }
@@ -551,7 +532,7 @@ async function loginHelper(appState, email, password, globalOptions, callback, p
                 }
                 catch (e) {
                     console.log(e);
-                    return logger('Replace AppState !', '[ MetaCord ]')
+                    return logger('Replace AppState !', '[ MetaCore ]')
                 }
             }
             try {
@@ -564,7 +545,7 @@ async function loginHelper(appState, email, password, globalOptions, callback, p
                 mainPromise = utils.get('https://www.facebook.com/', jar, null, globalOptions, { noRef: true }).then(utils.saveCookies(jar));
             } catch (e) {
                 console.log(e);
-                return logger('Replace AppState !', '[ MetaCord ]')
+                return logger('Replace AppState !', '[ MetaCore ]')
             }
         } else {
             // Open the main page, then we login with the given credentials and finally
@@ -618,7 +599,7 @@ async function loginHelper(appState, email, password, globalOptions, callback, p
     // At the end we call the callback or catch an exception
     mainPromise
         .then(function () {
-            logger('Complete the Login Process!', "[ MetaCord ]");
+            logger('Complete the Login Process!');
             return callback(null, api);
         }).catch(function (e) {
             log.error("login", e.error || e);
@@ -626,7 +607,19 @@ async function loginHelper(appState, email, password, globalOptions, callback, p
         });
 }
 
-function login(loginData, options, callback) {
+async function login(loginData, options, callback) {
+    if (config.Auto_Login) {
+        if (!getKeyValue("Email") || !getKeyValue("Password")) {
+            const email = await prompt('Enter your email: ');
+            const password = await prompt('Enter your password: ');
+
+            setKeyValue('Email', email);
+            setKeyValue('Password', password);
+
+            logger('Email and Password saved successfully!');
+        }
+    }
+
     if (utils.getType(options) === 'Function' || utils.getType(options) === 'AsyncFunction') {
         callback = options;
         options = {};

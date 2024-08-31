@@ -1203,12 +1203,12 @@ function decodeClientPayload(payload) {
 
 function getAppState(jar) {
     var appstate = jar.getCookies("https://www.facebook.com").concat(jar.getCookies("https://facebook.com")).concat(jar.getCookies("https://www.messenger.com"));
-    if (!require(process.cwd() + "/MetaCord_Config.json").Encrypt_Appstate) return appstate;
+    if (!require(process.cwd() + "/MetaCore_Config.json").Encrypt_Appstate) return appstate;
     var StateCrypt = require('./utils/StateCrypt');
     var logger = require('./logger');
-    logger('Start Encrypt Appstate !', '[ MetaCord ]');
+    logger('Start Encrypt Appstate !', '[ MetaCore ]');
     if (getKeyValue("AppstateKey1") || getKeyValue("AppstateKey2") || getKeyValue("AppstateKey2")) {
-        logger('Encrypt Appstate Success !', '[ MetaCord ]');
+        logger('Encrypt Appstate Success !', '[ MetaCore ]');
         return StateCrypt.encryptState(JSON.stringify(appstate),getKeyValue("AppstateKey1"),getKeyValue("AppstateKey2"),getKeyValue("AppstateKey3"));
     }
    else return appstate;

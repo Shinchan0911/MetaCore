@@ -24,7 +24,7 @@ module.exports = function (_defaultFuncs, _ctx) {
             var LinkSplit = Link.split('/');
             if (LinkSplit.indexOf("https:") == 0) {
               if (!isNaN(LinkSplit[3]) && !Link.split('=')[1]  && !isNaN(Link.split('=')[1])) {
-                callback('Wrong link, link should be formatted as follows: facebook.com/Lazic.Kanzu', null);
+                callback('Wrong link, link should be formatted as follows: facebook.com/thl.0911', null);
               }
               else if (!isNaN(Link.split('=')[1]) && Link.split('=')[1]) {
                 var Format = `https://www.facebook.com/profile.php?id=${Link.split('=')[1]}`;
