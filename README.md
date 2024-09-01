@@ -1,4 +1,4 @@
-# MetaCord Facebook Chat API
+# MetaCore Facebook Chat API
 
 Vi: MetaCore đã quay trở lại, được lọc những tính năng thừa thải và sẽ tập trung phát triển những tính năng cần thiết
 
@@ -22,7 +22,7 @@ shareLink
 This project is only available for bots that use listenMqtt
 
 ## Install
-If you just want to use metacord, you should use this command:
+If you just want to use metacore, you should use this command:
 ```bash
 npm install metacore
 ```
