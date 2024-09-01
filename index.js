@@ -163,11 +163,11 @@ function buildAPI(globalOptions, html, jar) {
             if (legacyFBMQTTMatch) {
                 mqttEndpoint = legacyFBMQTTMatch[4];
                 region = new URL(mqttEndpoint).searchParams.get("region").toUpperCase();
-                log.warn("login", `Cannot get sequence ID with new RegExp. Fallback to old RegExp (without seqID)...`);
+                logger(`Cannot get sequence ID with new RegExp. Fallback to old RegExp (without seqID)...`);
                 logger(`Area Of Account Is: ${region}`);
-                logger("login", `[Unused] Polling endpoint: ${legacyFBMQTTMatch[6]}`);
+                logger(`[Unused] Polling endpoint: ${legacyFBMQTTMatch[6]}`);
             } else {
-                log.warn("login", "Can't Get ID Try Again !");
+                logger("Can't Get ID Try Again !");
                 noMqttData = html;
             }
         }
